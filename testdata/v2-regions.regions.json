@@ -1,0 +1,22 @@
+{
+  "version": "v2",
+  "default_region": "uk",
+  "regions": [
+    {
+      "code": "uk",
+      "name": "UK & Ireland",
+      "requestable": true,
+      "bookmakers": 58,
+      "exchanges": [
+        "Betdaq",
+        "Betfair Exchange",
+        "Matchbook",
+        "Smarkets"
+      ],
+      "matched_coverage": true,
+      "coverage_model": "matched",
+      "exchange_available": true,
+      "board": "filtered"
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "plan": "free",
+  "rate_card": "2026-09",
+  "account": {
+    "status": "active",
+    "suspension_reason": null,
+    "test": true
+  },
+  "tokens": {
+    "used": 0,
+    "remaining": "unlimited",
+    "limit": "unlimited",
+    "resets_at": "2026-10-16T21:02:31Z"
+  },
+  "regions": [
+    "uk"
+  ],
+  "key": {
+    "id": "key_XXXXXXXXXXXX",
+    "kind": "server",
+    "products": [
+      "standard",
+      "2up",
+      "dutching",
+      "each-way",
+      "extra-place",
+      "bog",
+      "raw"
+    ],
+    "regions": [
+      "uk"
+    ],
+    "token_cap": null,
+    "tokens_used": null
+  },
+  "flood_cap": {
+    "per_10s": 0,
+    "per_min": 0
+  },
+  "scope": null,
+  "scope_version": null
+}

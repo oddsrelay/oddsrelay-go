@@ -1,0 +1,41 @@
+{
+  "status": "ok",
+  "version": "v2",
+  "boards": {
+    "bog": {
+      "processed_at": "2026-09-17T02:20:28.456Z",
+      "age_s": 4.1,
+      "count": 39
+    },
+    "dutching": {
+      "processed_at": "2026-09-17T02:20:26.250Z",
+      "age_s": 6.2,
+      "count": 4577
+    },
+    "each-way": {
+      "processed_at": "2026-09-17T02:20:28.456Z",
+      "age_s": 4.1,
+      "count": 39
+    },
+    "extra-place": {
+      "processed_at": "2026-09-17T02:20:28.456Z",
+      "age_s": 4.1,
+      "count": 14
+    },
+    "standard": {
+      "processed_at": "2026-09-17T02:20:29.403Z",
+      "age_s": 3.1,
+      "count": 1306
+    },
+    "2up": {
+      "processed_at": "2026-09-17T02:20:28.456Z",
+      "age_s": 4.1,
+      "count": 477
+    },
+    "raw": {
+      "processed_at": "2026-09-17T02:20:30.254Z",
+      "age_s": 2.2,
+      "count": 12248
+    }
+  }
+}

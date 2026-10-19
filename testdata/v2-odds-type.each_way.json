@@ -1,0 +1,65 @@
+{
+  "meta": {
+    "feed_type": "each-way",
+    "region": "uk",
+    "odds_format": "decimal",
+    "processed_at": "2026-09-17T02:20:28.456Z",
+    "last_seen": {
+      "7bet": {
+        "horse_racing": "2026-09-17T02:20:27Z",
+        "soccer": "2026-09-17T02:20:21Z"
+      },
+      "bet600": {
+        "horse_racing": "2026-09-17T02:20:26Z",
+        "soccer": "2026-09-17T02:20:04Z"
+      }
+    },
+    "count": 39,
+    "version": "v2",
+    "next_cursor": null
+  },
+  "data": [
+    {
+      "event_id": "or_evt_3f4db6a34819",
+      "sport_key": "horse_racing",
+      "sport_title": "Horse Racing",
+      "commence_time": "2026-09-17T03:40:00Z",
+      "venue": "Illawarra Grange",
+      "markets": [
+        {
+          "key": "each_way",
+          "outcomes": [
+            {
+              "name": "Albert Palais",
+              "back": [
+                {
+                  "bookmaker": "kwiff",
+                  "price": 2.7,
+                  "places": 3,
+                  "place_fraction": 0.2
+                }
+              ],
+              "lay": {
+                "win": [
+                  {
+                    "exchange": "betfair_exchange",
+                    "price": 3.25,
+                    "available": 21.71
+                  }
+                ],
+                "place": [
+                  {
+                    "exchange": "betfair_exchange",
+                    "price": 2.16,
+                    "available": 39.42,
+                    "places": 3
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

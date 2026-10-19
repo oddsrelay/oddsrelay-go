@@ -1,0 +1,33 @@
+{
+  "meta": {
+    "feed_type": "bookmakers",
+    "count": 70,
+    "version": "v2"
+  },
+  "data": [
+    {
+      "key": "7bet",
+      "name": "7bet",
+      "regions": [
+        "uk"
+      ],
+      "is_exchange": false
+    },
+    {
+      "key": "888sport",
+      "name": "888sport",
+      "regions": [
+        "uk"
+      ],
+      "is_exchange": false
+    },
+    {
+      "key": "bet365",
+      "name": "Bet365",
+      "regions": [
+        "uk"
+      ],
+      "is_exchange": false
+    }
+  ]
+}
