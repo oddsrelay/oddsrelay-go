@@ -1,6 +1,6 @@
 # oddsrelay-go
 
-The OddsRelay Go client. One method for each GET route of the [OddsRelay API](https://oddsrelay.io/docs), which
+The OddsRelay Go client. One method for each live-feed data and lookup route of the [OddsRelay API](https://oddsrelay.io/docs), which
 serves bookmaker and exchange odds for the UK & Ireland as JSON. Standard library only, Go 1.21 and up.
 
 ## Install
@@ -85,6 +85,8 @@ Every method takes a `context.Context` first.
 | `Pricing(ctx)` | `GET /v2/pricing` | The token rate card |
 | `OpenAPI(ctx)` | `GET /v2/openapi.json` | The API description (keyless) |
 | `Healthz(ctx)` | `GET /healthz` | A plain-text liveness check (keyless) |
+
+The historical odds routes (`GET /v2/historical/*`) have no method yet.
 
 Each method returns a `*Result[T]`. `Data` is the body decoded into a typed struct, and `Body` is the JSON as sent,
 with every field kept, including fields the API adds after this release. `Coverage` and `OpenAPI` return their JSON

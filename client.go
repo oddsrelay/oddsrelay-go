@@ -1,5 +1,6 @@
-// Package oddsrelay is the OddsRelay Go client: one method for each GET route of the OddsRelay API
-// (https://oddsrelay.io/docs), which serves bookmaker and exchange odds for the UK & Ireland as JSON.
+// Package oddsrelay is the OddsRelay Go client: one method for each live-feed data and lookup route of
+// the OddsRelay API (https://oddsrelay.io/docs), which serves bookmaker and exchange odds for the UK & Ireland
+// as JSON.
 //
 // The key comes from NewClient or the ODDSRELAY_KEY environment variable and travels only in the
 // Authorization header. Every request asks for gzip, sends back the URL's last ETag so an unchanged
