@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11-18)
 
 - `EventsState` and `EventsChanges`: each event's state in one region, and the changes after a position.
 - Historical odds: `HistoryRaw`, `HistoryEvent`, `Closing`, `HistoryFiles` and `DownloadFile`, which returns the

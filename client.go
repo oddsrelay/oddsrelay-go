@@ -27,7 +27,7 @@ import (
 
 const (
 	// Version is this client's version, sent in the User-Agent header.
-	Version = "0.1.0"
+	Version = "0.2.0"
 	// ContractVersion is the info.version of the API description these methods follow.
 	ContractVersion = "2026-07-08"
 	// DefaultBaseURL is where the API is served.
