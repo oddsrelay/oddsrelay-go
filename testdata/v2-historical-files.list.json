@@ -1,0 +1,22 @@
+{
+ "meta": {
+  "feed_type": "historical_files",
+  "region": "uk",
+  "count": 1,
+  "version": "v2",
+  "historical": true,
+  "bookmakers_only": false
+ },
+ "data": [
+  {
+   "name": "closing/soccer/2026-10-16.csv.gz",
+   "tier": "closing",
+   "sport": "soccer",
+   "day": "2026-10-16",
+   "size": 2481190,
+   "url": "/v2/historical/files/closing/soccer/2026-10-16.csv.gz",
+   "cost": 30,
+   "bookmakers_only": false
+  }
+ ]
+}

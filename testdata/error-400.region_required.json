@@ -1,0 +1,7 @@
+{
+ "error": {
+  "code": "region_required",
+  "message": "This key does not cover uk, the region a call without ?region= reads. Add ?region=za (one of your key's regions).",
+  "request_id": "or_req_00000000000000000000000000000000"
+ }
+}

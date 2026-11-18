@@ -1,0 +1,8 @@
+{
+ "error": {
+  "code": "since_expired",
+  "message": "This since token can no longer be served: snapshot again with /v2/events/state, then follow from its meta.since.",
+  "request_id": "or_req_0123456789abcdef0123456789abcdef",
+  "oldest_since": "3fa9c1d2.1840221"
+ }
+}

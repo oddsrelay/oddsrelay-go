@@ -1,0 +1,9 @@
+{
+ "error": {
+  "code": "date_out_of_range",
+  "message": "'date' is before the archive: historical odds run from 2026-10-15T00:00:00.000Z to 2026-10-17T23:59:59.400Z.",
+  "earliest": "2026-10-15T00:00:00.000Z",
+  "latest": "2026-10-17T23:59:59.400Z",
+  "request_id": "or_req_00000000000000000000000000000000"
+ }
+}

@@ -1,0 +1,8 @@
+{
+ "error": {
+  "code": "product_not_in_region",
+  "message": "Region 'za' does not serve 'standard'.",
+  "request_id": "or_req_00000000000000000000000000000000",
+  "type": "product"
+ }
+}

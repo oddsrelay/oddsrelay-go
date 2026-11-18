@@ -1,0 +1,61 @@
+{
+ "meta": {
+  "feed_type": "raw",
+  "region": "uk",
+  "odds_format": "decimal",
+  "processed_at": "2026-11-16T11:59:59.695Z",
+  "count": 1,
+  "version": "v2",
+  "next_cursor": null,
+  "total": 1,
+  "board_version": 1794830399695,
+  "historical": true,
+  "timestamp": "2026-11-16T11:59:59.695Z",
+  "previous_timestamp": "2026-11-16T11:59:59.365Z",
+  "next_timestamp": "2026-11-16T12:00:00.242Z",
+  "complete": true
+ },
+ "data": [
+  {
+   "id": "or_evt_e7d98bab53e3",
+   "cluster_id": null,
+   "sport_key": "soccer_premier_league",
+   "sport_title": "Premier League",
+   "competition_key": "soccer_english_premier_league",
+   "previous_ids": [
+    "or_evt_027b99232a21"
+   ],
+   "commence_time": "2026-11-21T12:30:00Z",
+   "home_team": "Manchester City",
+   "away_team": "Fulham",
+   "bookmakers": [
+    {
+     "key": "sky_bet",
+     "title": "Sky Bet",
+     "region": "uk",
+     "last_update": "2026-11-16T10:15:13Z",
+     "markets": [
+      {
+       "key": "h2h",
+       "last_update": "2026-11-16T10:15:13Z",
+       "outcomes": [
+        {
+         "name": "Draw",
+         "price": 5.0
+        },
+        {
+         "name": "Fulham",
+         "price": 7.0
+        },
+        {
+         "name": "Man City",
+         "price": 1.36
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

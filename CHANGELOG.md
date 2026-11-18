@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- `EventsState` and `EventsChanges`: each event's state in one region, and the changes after a position.
+- Historical odds: `HistoryRaw`, `HistoryEvent`, `Closing`, `HistoryFiles` and `DownloadFile`, which returns the
+  file's bytes. The priced ones quote first when `MaxTokens` is set.
+- Regions: `RawParams.Region` takes one region code or several international codes joined with commas
+  (`"us,global"`), and `Meta.Regions` holds a list reply's codes. `InPlay` on `OddsParams`, `RawParams` and
+  `EventParams`.
+- `APIError` carries `Earliest` and `Latest` on a 400 `date_out_of_range`.
+- README: the regions, the `region_required`, `product_not_in_region` and `date_out_of_range` error codes, and
+  in-play prices.
+
 ## 0.1.0 (2026-10-19)
 
 The first version, following API description version 2026-07-08.

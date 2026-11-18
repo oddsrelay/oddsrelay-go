@@ -26,6 +26,10 @@ type Meta struct {
 	// Total and BoardVersion come with the raw board: rows on every page, and the board's version.
 	Total        int   `json:"total"`
 	BoardVersion int64 `json:"board_version"`
+	// Regions comes with a raw page asked for a list of regions: the codes, sorted.
+	Regions []string `json:"regions"`
+	// Historical is true on every historical reply.
+	Historical bool `json:"historical"`
 	// LastSeen comes with the matched boards: venue key, then sport key, then an ISO 8601 time.
 	LastSeen map[string]map[string]string `json:"last_seen"`
 }
@@ -295,4 +299,77 @@ type PriceTable struct {
 type RecentFactor struct {
 	MaxAgeS float64 `json:"max_age_s"`
 	Factor  float64 `json:"factor"`
+}
+
+// EventState is one event's state in a region.
+type EventState struct {
+	ID             string   `json:"id"`
+	State          string   `json:"state"` // "scheduled", "started", "gone" or "merged"; more may follow
+	StateSince     string   `json:"state_since"`
+	MergedInto     string   `json:"merged_into"` // the surviving id, when State is "merged"
+	SportKey       string   `json:"sport_key"`
+	SportTitle     string   `json:"sport_title"`
+	CompetitionKey string   `json:"competition_key"`
+	HomeTeam       string   `json:"home_team"`
+	AwayTeam       string   `json:"away_team"`
+	Venue          string   `json:"venue"`
+	EventName      string   `json:"event_name"`
+	CommenceTime   string   `json:"commence_time"`
+	PreviousIDs    []string `json:"previous_ids"`
+	Regions        []string `json:"regions"`
+	FirstSeen      string   `json:"first_seen"`
+	Seq            int64    `json:"seq"`
+}
+
+// EventStateMeta is the meta object of EventsState and EventsChanges.
+type EventStateMeta struct {
+	Region     string `json:"region"`
+	Count      int    `json:"count"`
+	NextCursor string `json:"next_cursor"` // EventsState: the Cursor for the next page
+	Since      string `json:"since"`       // EventsState: keep the first page's, for EventsChanges
+	NextSince  string `json:"next_since"`  // EventsChanges: the since for the next call
+	More       bool   `json:"more"`        // EventsChanges: call again at once
+	AsOf       string `json:"as_of"`
+	Stale      bool   `json:"stale"`
+	// UnknownIDs lists the EventIDs asked for that have no row in the region.
+	UnknownIDs []string `json:"unknown_ids"`
+}
+
+// EventStatesPage is the reply of EventsState.
+type EventStatesPage struct {
+	Meta EventStateMeta `json:"meta"`
+	Data []EventState   `json:"data"`
+}
+
+// EventChange is one change in a region's log. Replace your row for Event.ID with Event whenever
+// its Seq is above your row's, whatever Change says.
+type EventChange struct {
+	Seq    int64      `json:"seq"`
+	At     string     `json:"at"`
+	Change string     `json:"change"`
+	Event  EventState `json:"event"`
+}
+
+// EventChangesPage is the reply of EventsChanges.
+type EventChangesPage struct {
+	Meta EventStateMeta `json:"meta"`
+	Data []EventChange  `json:"data"`
+}
+
+// HistoryFiles is the reply of HistoryFiles.
+type HistoryFiles struct {
+	Meta Meta          `json:"meta"`
+	Data []HistoryFile `json:"data"`
+}
+
+// HistoryFile is one bulk file: pass Tier, Sport and the last part of Name to DownloadFile.
+type HistoryFile struct {
+	Name           string `json:"name"`
+	Tier           string `json:"tier"`
+	Sport          string `json:"sport"`
+	Day            string `json:"day"`
+	Size           int64  `json:"size"` // bytes
+	URL            string `json:"url"`
+	Cost           int64  `json:"cost"` // tokens
+	BookmakersOnly bool   `json:"bookmakers_only"`
 }

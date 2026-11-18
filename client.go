@@ -1,6 +1,6 @@
-// Package oddsrelay is the OddsRelay Go client: one method for each live-feed data and lookup route of
-// the OddsRelay API (https://oddsrelay.io/docs), which serves bookmaker and exchange odds for the UK & Ireland
-// as JSON.
+// Package oddsrelay is the OddsRelay Go client: one method for each data, lookup and historical route of
+// the OddsRelay API (https://oddsrelay.io/docs), which serves bookmaker odds for the UK & Ireland and 20 more
+// regions as JSON: raw prices in every region, and UK and Irish bookmakers matched to exchange lay prices.
 //
 // The key comes from NewClient or the ODDSRELAY_KEY environment variable and travels only in the
 // Authorization header. Every request asks for gzip, sends back the URL's last ETag so an unchanged
@@ -190,6 +190,8 @@ type APIError struct {
 	Code    string // "" on the front door's empty-bodied 429 and 502
 	Message string
 	Valid   []string // the accepted values, where the API lists them
+	// A 400 date_out_of_range, from a historical route, carries the range the region's archive holds.
+	Earliest, Latest string
 	// A 402 (insufficient_tokens) carries the call's cost, the balance left and when it resets.
 	Cost      int64
 	Remaining Amount
@@ -231,6 +233,7 @@ type OddsParams struct {
 	Markets          []string  `query:"markets"`
 	CommenceTimeFrom time.Time `query:"commenceTimeFrom"`
 	CommenceTimeTo   time.Time `query:"commenceTimeTo"`
+	InPlay           string    `query:"inPlay"` // "standard" and "dutching" only: "exclude" (the default) or "only"
 	// MaxTokens, above 0, quotes the call first and returns a *QuoteTooHighError, without
 	// making it, when it would cost more. It is not sent.
 	MaxTokens int64
@@ -238,6 +241,8 @@ type OddsParams struct {
 
 // RawParams filters the raw board. Every field is optional, and a zero value is not sent.
 type RawParams struct {
+	// Region is one code, or several international codes read as one board, joined with commas
+	// ("us,global"). "uk" is asked alone.
 	Region            string    `query:"region"`
 	OddsFormat        string    `query:"oddsFormat"`
 	Sports            []string  `query:"sports"`
@@ -251,6 +256,7 @@ type RawParams struct {
 	CommenceTimeTo    time.Time `query:"commenceTimeTo"`
 	UpdatedSince      time.Time `query:"updatedSince"`
 	ExchangesOnly     *bool     `query:"exchangesOnly"`
+	InPlay            string    `query:"inPlay"` // "exclude" (the default), "include" or "only"
 	IncludeLinks      *bool     `query:"includeLinks"`
 	IncludeLiquidity  *bool     `query:"includeLiquidity"`
 	Cursor            string    `query:"cursor"` // a page's Meta.NextCursor, for the page after it
@@ -264,6 +270,7 @@ type EventParams struct {
 	OddsFormat       string `query:"oddsFormat"`
 	IncludeLinks     *bool  `query:"includeLinks"`
 	IncludeLiquidity *bool  `query:"includeLiquidity"`
+	InPlay           string `query:"inPlay"` // "exclude" (the default), "include" or "only"
 	MaxTokens        int64  // as in OddsParams
 }
 
@@ -280,6 +287,37 @@ type EventsParams struct {
 	EventIDs         []string  `query:"eventIds"`
 	CommenceTimeFrom time.Time `query:"commenceTimeFrom"`
 	CommenceTimeTo   time.Time `query:"commenceTimeTo"`
+}
+
+// EventStateParams filters the event states of one region. Use the same values for EventsChanges.
+type EventStateParams struct {
+	Region           string    `query:"region"`
+	Sports           []string  `query:"sports"`
+	Leagues          []string  `query:"leagues"`
+	EventIDs         []string  `query:"eventIds"`
+	States           []string  `query:"states"` // "scheduled" (the default), "started", "gone", "merged"; EventsState only
+	CommenceTimeFrom time.Time `query:"commenceTimeFrom"`
+	CommenceTimeTo   time.Time `query:"commenceTimeTo"`
+	Cursor           string    `query:"cursor"` // EventsState only
+	Limit            int       `query:"limit"`
+}
+
+// HistoryParams filters a historical call. Region is "uk" (the API's default) or one other code;
+// each region's archive has its own first day.
+type HistoryParams struct {
+	Region           string   `query:"region"`
+	OddsFormat       string   `query:"oddsFormat"`
+	Bookmakers       []string `query:"bookmakers"`
+	Exchanges        []string `query:"exchanges"`
+	Markets          []string `query:"markets"`
+	EventIDs         []string `query:"eventIds"` // HistoryRaw only
+	ExchangesOnly    *bool    `query:"exchangesOnly"`
+	BookmakersOnly   *bool    `query:"bookmakersOnly"`
+	IncludeLiquidity *bool    `query:"includeLiquidity"` // HistoryRaw only
+	To               string   `query:"to"`               // HistoryEvent only: the window's end, at most 24 hours after from
+	Cursor           string   `query:"cursor"`
+	Limit            int      `query:"limit"`
+	MaxTokens        int64    // as in OddsParams
 }
 
 // Odds gets one matched board: "standard", "2up", "dutching", "each-way", "extra-place" or "bog".
@@ -340,6 +378,62 @@ func (c *Client) Events(ctx context.Context, sport string, p EventsParams) (*Res
 	q := query(p)
 	q.Set("sport", sport)
 	return get[EventsPage](ctx, c, "/v2/events", q, true)
+}
+
+// EventsState gets a page of event states for one region: scheduled, started, gone or merged. It
+// spends no tokens. Keep the first page's Meta.Since and follow EventsChanges from it.
+func (c *Client) EventsState(ctx context.Context, p EventStateParams) (*Result[EventStatesPage], error) {
+	return get[EventStatesPage](ctx, c, "/v2/events/state", query(p), true)
+}
+
+// EventsChanges gets the state changes after since, in order, with the filters of the snapshot. It
+// spends no tokens. Call again with Meta.NextSince. An *APIError with Code "since_expired" (410)
+// means: take a new snapshot.
+func (c *Client) EventsChanges(ctx context.Context, since string, p EventStateParams) (*Result[EventChangesPage], error) {
+	q := query(p)
+	q.Set("since", since)
+	return get[EventChangesPage](ctx, c, "/v2/events/changes", q, true)
+}
+
+// HistoryRaw gets a page of the raw board as it stood at date (an ISO 8601 time), for sports.
+func (c *Client) HistoryRaw(ctx context.Context, date string, sports []string, p HistoryParams) (*Result[RawPage], error) {
+	q := query(p)
+	q.Set("date", date)
+	q.Set("sports", strings.Join(sports, ","))
+	return priced[RawPage](ctx, c, "/v2/historical/odds/raw", q, p.MaxTokens)
+}
+
+// HistoryEvent gets one event's price changes from from (an ISO 8601 time) to p.To, at most 24
+// hours. Data is the JSON as sent.
+func (c *Client) HistoryEvent(ctx context.Context, id, from string, p HistoryParams) (*Result[json.RawMessage], error) {
+	q := query(p)
+	q.Set("from", from)
+	return priced[json.RawMessage](ctx, c, "/v2/historical/events/"+url.PathEscape(id)+"/odds", q, p.MaxTokens)
+}
+
+// Closing gets the opening and closing prices of the events that started on the UTC day date
+// ("2006-01-02"), for sports. Data is the JSON as sent.
+func (c *Client) Closing(ctx context.Context, date string, sports []string, p HistoryParams) (*Result[json.RawMessage], error) {
+	q := query(p)
+	q.Set("date", date)
+	q.Set("sports", strings.Join(sports, ","))
+	return priced[json.RawMessage](ctx, c, "/v2/historical/closing", q, p.MaxTokens)
+}
+
+// HistoryFiles lists the bulk day files of region ("" for the API's default), with each one's size and cost.
+func (c *Client) HistoryFiles(ctx context.Context, region string) (*Result[HistoryFiles], error) {
+	return get[HistoryFiles](ctx, c, "/v2/historical/files", regionQuery(region), true)
+}
+
+// DownloadFile gets one bulk file: Data is its bytes, a gzip CSV as sent. A file is charged in full
+// when the download starts; maxTokens, above 0, quotes it first as in OddsParams.
+func (c *Client) DownloadFile(ctx context.Context, tier, sport, file, region string, maxTokens int64) (*Result[[]byte], error) {
+	path := "/v2/historical/files/" + url.PathEscape(tier) + "/" + url.PathEscape(sport) + "/" + url.PathEscape(file)
+	q := regionQuery(region)
+	if q == nil {
+		q = url.Values{}
+	}
+	return priced[[]byte](ctx, c, path, q, maxTokens)
 }
 
 // Bookmakers gets the venues you can filter on, with their keys.
@@ -462,6 +556,8 @@ func get[T any](ctx context.Context, c *Client, path string, q url.Values, sendK
 	res := &Result[T]{Response: *r}
 	if s, ok := any(&res.Data).(*string); ok {
 		*s = string(r.Body)
+	} else if b, ok := any(&res.Data).(*[]byte); ok {
+		*b = r.Body
 	} else if err := json.Unmarshal(r.Body, &res.Data); err != nil {
 		return nil, fmt.Errorf("oddsrelay: reading the reply to %s: %w", path, err)
 	}
@@ -533,7 +629,7 @@ func (c *Client) do(ctx context.Context, path string, q url.Values, sendKey bool
 		r.NotModified, r.Body = true, bytes.Clone(prev.body) // a caller's edits never reach the cache
 	case res.StatusCode >= 300:
 		return nil, c.apiError(r)
-	case r.ETag != "":
+	case r.ETag != "" && !strings.HasPrefix(h.Get("Content-Type"), "application/gzip"): // a file is never kept
 		c.remember(u, cached{r.ETag, bytes.Clone(body)})
 	}
 	return r, nil
@@ -589,6 +685,8 @@ func (c *Client) apiError(r *Response) *APIError {
 			Message   string   `json:"message"`
 			RequestID string   `json:"request_id"`
 			Valid     []string `json:"valid"`
+			Earliest  string   `json:"earliest"`
+			Latest    string   `json:"latest"`
 			Cost      int64    `json:"cost"`
 			Remaining Amount   `json:"remaining"`
 			ResetsAt  string   `json:"resets_at"`
@@ -596,8 +694,8 @@ func (c *Client) apiError(r *Response) *APIError {
 	}
 	_ = json.Unmarshal(r.Body, &b) // the front door's 429 and 502 have an empty body
 	e := b.Error
-	err := &APIError{Code: e.Code, Message: e.Message, Valid: e.Valid, Cost: e.Cost, Remaining: e.Remaining,
-		ResetsAt: e.ResetsAt, Response: *r}
+	err := &APIError{Code: e.Code, Message: e.Message, Valid: e.Valid, Earliest: e.Earliest, Latest: e.Latest,
+		Cost: e.Cost, Remaining: e.Remaining, ResetsAt: e.ResetsAt, Response: *r}
 	if err.Message == "" {
 		err.Message = "HTTP " + strconv.Itoa(r.StatusCode)
 	}

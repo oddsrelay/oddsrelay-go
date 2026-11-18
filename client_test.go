@@ -600,3 +600,112 @@ func TestConcurrentUse(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestRegions(t *testing.T) {
+	f := serve(t, "test-key",
+		jsonReply([]byte(`{"meta":{"region":"global,us","regions":["global","us"]},"data":[]}`)),
+		reply{status: http.StatusBadRequest, body: fixture(t, "error-400.region_required.json")},
+		reply{status: http.StatusForbidden, body: fixture(t, "error-403.product_not_in_region.json")},
+	)
+	page, err := f.Raw(ctx, RawParams{Region: "us,global", InPlay: "only"})
+	if err != nil || !reflect.DeepEqual(page.Data.Meta.Regions, []string{"global", "us"}) {
+		t.Fatalf("list of regions: %+v, %v", page, err)
+	}
+	if q := f.requests()[0].query; q.Get("region") != "us,global" || q.Get("inPlay") != "only" {
+		t.Errorf("query = %v", q)
+	}
+	var e *APIError
+	if _, err = f.Raw(ctx, RawParams{}); !errors.As(err, &e) || e.StatusCode != 400 || e.Code != "region_required" {
+		t.Errorf("no region = %v", err)
+	}
+	if _, err = f.Odds(ctx, "standard", OddsParams{Region: "za"}); !errors.As(err, &e) || e.StatusCode != 403 || e.Code != "product_not_in_region" {
+		t.Errorf("matched board abroad = %v", err)
+	}
+}
+
+func TestEventStates(t *testing.T) {
+	f := serve(t, "test-key",
+		jsonReply(fixture(t, "v2-events-state.page.json")),
+		jsonReply(fixture(t, "v2-events-changes.page.json")),
+		reply{status: http.StatusGone, body: fixture(t, "error-410.since_expired.json")},
+	)
+	p := EventStateParams{Region: "us", Sports: []string{"basketball"}}
+	snap, err := f.EventsState(ctx, p)
+	if err != nil || len(snap.Data.Data) != 1 || snap.Data.Data[0].State != "scheduled" || snap.Data.Meta.Since == "" {
+		t.Fatalf("snapshot: %+v, %v", snap, err)
+	}
+	log, err := f.EventsChanges(ctx, snap.Data.Meta.Since, p)
+	if err != nil || log.Data.Data[0].Event.State != "started" || log.Data.Meta.NextSince != "3fa9c1d2.1840305" || log.Data.Meta.More {
+		t.Fatalf("changes: %+v, %v", log, err)
+	}
+	r := f.requests()[1]
+	want := url.Values{"since": {"3fa9c1d2.1840221"}, "region": {"us"}, "sports": {"basketball"}}
+	if r.path != "/v2/events/changes" || !reflect.DeepEqual(r.query, want) {
+		t.Errorf("sent %s?%s", r.path, r.query.Encode())
+	}
+	var e *APIError
+	if _, err = f.EventsChanges(ctx, "00000000.1", p); !errors.As(err, &e) || e.StatusCode != 410 || e.Code != "since_expired" {
+		t.Errorf("expired since = %v", err)
+	}
+}
+
+func TestHistory(t *testing.T) {
+	f := serve(t, "test-key",
+		jsonReply(fixture(t, "v2-odds-type.quote.json")),
+		jsonReply(fixture(t, "v2-historical-odds-raw.page.json")),
+		jsonReply(fixture(t, "v2-historical-events-id-odds.rows.json")),
+		jsonReply(fixture(t, "v2-historical-closing.page.json")),
+		jsonReply(fixture(t, "v2-historical-files.list.json")),
+		reply{status: http.StatusBadRequest, body: fixture(t, "error-400.date_out_of_range.json")},
+	)
+	board, err := f.HistoryRaw(ctx, "2026-11-16T12:00:00Z", []string{"soccer"}, HistoryParams{Region: "us", MaxTokens: 1 << 40})
+	if err != nil || !board.Data.Meta.Historical || len(board.Data.Data) != 1 {
+		t.Fatalf("snapshot: %+v, %v", board, err)
+	}
+	rows, err := f.HistoryEvent(ctx, "or_evt/1", "2026-11-16T12:00:00Z", HistoryParams{BookmakersOnly: Bool(true), To: "2026-11-16T18:00:00Z"})
+	if err != nil || !bytes.Contains(rows.Data, []byte(`"gaps"`)) {
+		t.Fatalf("event: %v", err)
+	}
+	lines, err := f.Closing(ctx, "2026-11-08", []string{"soccer", "tennis"}, HistoryParams{})
+	if err != nil || !bytes.Contains(lines.Data, []byte(`"historical_closing"`)) {
+		t.Fatalf("closing: %v", err)
+	}
+	files, err := f.HistoryFiles(ctx, "uk")
+	if err != nil || files.Data.Data[0].Tier != "closing" || files.Data.Data[0].Size == 0 || files.Data.Data[0].Cost == 0 {
+		t.Fatalf("files: %+v, %v", files, err)
+	}
+	var e *APIError
+	if _, err = f.Closing(ctx, "2026-11-01", []string{"basketball"}, HistoryParams{Region: "us"}); !errors.As(err, &e) ||
+		e.Code != "date_out_of_range" || e.Earliest == "" || e.Latest == "" {
+		t.Errorf("before the archive = %v", err)
+	}
+	want := []seen{
+		{path: "/v2/historical/odds/raw", query: url.Values{"date": {"2026-11-16T12:00:00Z"}, "sports": {"soccer"}, "region": {"us"}, "quote": {"true"}}},
+		{path: "/v2/historical/odds/raw", query: url.Values{"date": {"2026-11-16T12:00:00Z"}, "sports": {"soccer"}, "region": {"us"}}},
+		{path: "/v2/historical/events/or_evt%2F1/odds", query: url.Values{"from": {"2026-11-16T12:00:00Z"}, "to": {"2026-11-16T18:00:00Z"}, "bookmakersOnly": {"true"}}},
+		{path: "/v2/historical/closing", query: url.Values{"date": {"2026-11-08"}, "sports": {"soccer,tennis"}}},
+		{path: "/v2/historical/files", query: url.Values{"region": {"uk"}}},
+	}
+	for i, r := range f.requests()[:len(want)] {
+		if r.path != want[i].path || !reflect.DeepEqual(r.query, want[i].query) {
+			t.Errorf("request %d: %s?%s, want %s?%s", i+1, r.path, r.query.Encode(), want[i].path, want[i].query.Encode())
+		}
+	}
+}
+
+func TestDownloadFile(t *testing.T) {
+	sent := []byte{0x1f, 0x8b, 8, 0, 1, 2, 3} // stands in for a gzip CSV
+	file := reply{header: map[string]string{"Content-Type": "application/gzip", "ETag": `"f1"`}, body: sent, plain: true}
+	f := serve(t, "test-key", file, file)
+	res, err := f.DownloadFile(ctx, "closing", "soccer", "2026-10-16.csv.gz", "", 0)
+	if err != nil || !bytes.Equal(res.Data, sent) {
+		t.Fatalf("download: %v, %v", res, err)
+	}
+	if _, err = f.DownloadFile(ctx, "closing", "soccer", "2026-10-16.csv.gz", "", 0); err != nil {
+		t.Fatal(err)
+	}
+	r := f.requests()
+	if r[0].path != "/v2/historical/files/closing/soccer/2026-10-16.csv.gz" || r[1].header.Get("If-None-Match") != "" {
+		t.Errorf("sent %s, If-None-Match %q: a file is never kept for a 304", r[0].path, r[1].header.Get("If-None-Match"))
+	}
+}

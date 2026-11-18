@@ -1,7 +1,8 @@
 # oddsrelay-go
 
-The OddsRelay Go client. One method for each live-feed data and lookup route of the [OddsRelay API](https://oddsrelay.io/docs), which
-serves bookmaker and exchange odds for the UK & Ireland as JSON. Standard library only, Go 1.21 and up.
+The OddsRelay Go client. One method for each data, lookup and historical route of the [OddsRelay API](https://oddsrelay.io/docs), which
+serves bookmaker odds for the UK & Ireland and 20 more regions as JSON: raw prices in every region, and UK and Irish
+bookmakers matched to exchange lay prices. Standard library only, Go 1.21 and up.
 
 ## Install
 
@@ -64,6 +65,24 @@ status, err := client.Status(ctx, "uk")
 coverage, err := client.Coverage(ctx, "uk")
 ```
 
+## Regions
+
+Raw prices, in-play prices, event states and historical odds come from every region `Regions` lists. `Raw` takes one
+code, or several international codes in one call (`uk` is always asked alone). Every other method takes one code.
+
+```go
+page, err := client.Raw(ctx, oddsrelay.RawParams{Region: "us", Sports: []string{"basketball"}})
+// one board, priced as the two together
+both, err := client.Raw(ctx, oddsrelay.RawParams{Region: "us,global", Sports: []string{"basketball"}})
+// prices on events in play
+live, err := client.Raw(ctx, oddsrelay.RawParams{Region: "us", Sports: []string{"basketball"}, InPlay: "only"})
+```
+
+- The matched boards and the exchanges are served for `uk` only: elsewhere `Odds` returns an `*APIError` with status
+  403 and `Code` `product_not_in_region`.
+- A call with no `Region` reads `uk` when that is your account's home region. With another home region it returns
+  an `*APIError` with status 400 and `Code` `region_required`: set `Region`.
+
 ## Methods
 
 Every method takes a `context.Context` first.
@@ -77,6 +96,8 @@ Every method takes a `context.Context` first.
 | `QuoteOdds`, `QuoteRaw`, `QuoteEvent` | the same three routes, with `quote=true` | What the call would cost, without making it |
 | `Sports(ctx, SportsParams)` | `GET /v2/sports` | Sport and competition keys, a page at a time |
 | `Events(ctx, sport, EventsParams)` | `GET /v2/events` | Events for one sport key, a page at a time |
+| `EventsState(ctx, EventStateParams)` | `GET /v2/events/state` | Each event's state in one region: scheduled, started, gone or merged (no tokens) |
+| `EventsChanges(ctx, since, EventStateParams)` | `GET /v2/events/changes` | The state changes after `since`, in order (no tokens) |
 | `Bookmakers(ctx)` | `GET /v2/bookmakers` | The venues you can filter on, with their keys |
 | `Regions(ctx)` | `GET /v2/regions` | The region codes open to your key |
 | `Coverage(ctx, region)` | `GET /v2/coverage` | Which venues and sports each product carries (keyless; more detail with a key) |
@@ -86,12 +107,15 @@ Every method takes a `context.Context` first.
 | `Pricing(ctx)` | `GET /v2/pricing` | The token rate card |
 | `OpenAPI(ctx)` | `GET /v2/openapi.json` | The API description (keyless) |
 | `Healthz(ctx)` | `GET /healthz` | A plain-text liveness check (keyless) |
-
-The historical odds routes (`GET /v2/historical/*`) have no method yet.
+| `HistoryRaw(ctx, date, sports, HistoryParams)` | `GET /v2/historical/odds/raw` | The raw board as it stood at one moment |
+| `HistoryEvent(ctx, id, from, HistoryParams)` | `GET /v2/historical/events/{id}/odds` | One event's price changes over a window of up to 24 hours |
+| `Closing(ctx, date, sports, HistoryParams)` | `GET /v2/historical/closing` | Opening and closing prices of the events that started on one UTC day |
+| `HistoryFiles(ctx, region)` | `GET /v2/historical/files` | The bulk day files, with each one's size and cost |
+| `DownloadFile(ctx, tier, sport, file, region, maxTokens)` | `GET /v2/historical/files/{tier}/{sport}/{file}` | One bulk file, as bytes |
 
 Each method returns a `*Result[T]`. `Data` is the body decoded into a typed struct, and `Body` is the JSON as sent,
-with every field kept, including fields the API adds after this release. `Coverage` and `OpenAPI` return their JSON
-as a `json.RawMessage`, since the keyless and keyed coverage replies differ in shape. On a matched board, an
+with every field kept, including fields the API adds after this release. `Coverage`, `OpenAPI`, `HistoryEvent` and
+`Closing` return their JSON as a `json.RawMessage`, since the keyless and keyed coverage replies differ in shape. On a matched board, an
 outcome's `Lay` is also left as JSON: a list of `LayOffer`, or on `each-way` and `extra-place` a `PlaceLays`.
 
 ## Filters
@@ -114,6 +138,45 @@ The client asks for the API's default shapes, the envelope and ISO 8601 dates, s
 among the fields. The API checks every filter itself: an unknown value returns an `*APIError` whose `Valid` lists
 the accepted values, where the API sends them.
 
+## Historical odds
+
+```go
+us := oddsrelay.HistoryParams{Region: "us", MaxTokens: maxTokens}
+board, err := client.HistoryRaw(ctx, "2026-11-17T18:00:00Z", []string{"basketball"}, us)
+moves, err := client.HistoryEvent(ctx, eventID, "2026-11-17T12:00:00Z", us) // 24 hours from there, or set To
+lines, err := client.Closing(ctx, "2026-11-17", []string{"basketball"}, us)
+
+files, err := client.HistoryFiles(ctx, "uk")
+file, err := client.DownloadFile(ctx, "closing", "soccer", "2026-11-17.csv.gz", "uk", maxTokens)
+if err == nil {
+	err = os.WriteFile("2026-11-17.csv.gz", file.Data, 0o644) // a gzip CSV, saved as sent
+}
+```
+
+Each region has its own archive with its own first day. A date before it returns an `*APIError` with `Code`
+`date_out_of_range`, whose `Earliest` and `Latest` give the range that region holds. Outside `uk` the archive holds
+bookmakers only. A file is charged in full when its download starts; `maxTokens` above 0 prices it first, and
+`HistoryFiles` lists each file's `Cost`.
+
+## Event states
+
+`EventsState` is a snapshot of every event's state in one region, and `EventsChanges` follows it. Neither spends
+tokens.
+
+```go
+filters := oddsrelay.EventStateParams{Region: "us", Sports: []string{"basketball"}}
+snapshot, err := client.EventsState(ctx, filters)
+since := snapshot.Data.Meta.Since // from the first page
+
+log, err := client.EventsChanges(ctx, since, filters) // the same filters as the snapshot
+for _, change := range log.Data.Data {
+	rows[change.Event.ID] = change.Event
+}
+since = log.Data.Meta.NextSince // call again at once while log.Data.Meta.More is true
+```
+
+If `since` is too old the API answers 410 with `Code` `since_expired`: take a new snapshot.
+
 ## Price a call before you make it
 
 `QuoteOdds`, `QuoteRaw` and `QuoteEvent` ask what a call would cost instead of making it. A quote spends no tokens:
@@ -126,7 +189,7 @@ if err != nil {
 fmt.Println(quote.Data.Cost, quote.Data.Remaining)
 ```
 
-Or let the client do it. With `MaxTokens` set, `Odds`, `Raw` and `Event` quote first and return a
+Or let the client do it. With `MaxTokens` set, `Odds`, `Raw`, `Event` and the priced history methods quote first and return a
 `*QuoteTooHighError`, without making the call, when the cost is above your cap:
 
 ```go
@@ -159,7 +222,7 @@ A client keeps the last 32 URLs it has read, so make one client and share it. It
 
 ## Paging
 
-`Raw`, `Sports` and `Events` return a page at a time. `RawPages` walks the raw board for you, to the last page:
+`Raw`, `Sports`, `Events`, `EventsState` and the history methods return a page at a time. `RawPages` walks the raw board for you, to the last page:
 
 ```go
 err := client.RawPages(ctx, oddsrelay.RawParams{Region: "uk", Sports: []string{"tennis"}},
@@ -169,7 +232,7 @@ err := client.RawPages(ctx, oddsrelay.RawParams{Region: "uk", Sports: []string{"
 	})
 ```
 
-For `Sports` and `Events`, pass each page's `Meta.NextCursor` back as `Cursor`, until it is empty:
+For the others, pass each page's `Meta.NextCursor` back as `Cursor`, until it is empty:
 
 ```go
 params := oddsrelay.SportsParams{Region: "uk"}

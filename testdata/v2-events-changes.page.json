@@ -1,0 +1,48 @@
+{
+ "meta": {
+  "feed_type": "events_changes",
+  "region": "us",
+  "odds_format": "decimal",
+  "processed_at": "2026-11-21T00:31:20.000Z",
+  "count": 1,
+  "version": "v2",
+  "next_cursor": null,
+  "next_since": "3fa9c1d2.1840305",
+  "more": false,
+  "as_of": "2026-11-21T00:31:20Z",
+  "stale": false,
+  "lag_s": 0,
+  "verdicts_held": false,
+  "oldest_since": "3fa9c1d2.1700000"
+ },
+ "data": [
+  {
+   "seq": 1840305,
+   "at": "2026-11-21T00:31:20Z",
+   "change": "started",
+   "board_version": 1795221080000,
+   "event": {
+    "id": "or_evt_e7d98bab53e3",
+    "state": "started",
+    "reason": null,
+    "state_since": "2026-11-21T00:31:10Z",
+    "merged_into": null,
+    "sport_key": "basketball_nba",
+    "sport_title": "NBA",
+    "competition_key": "basketball_nba",
+    "home_team": "Boston Celtics",
+    "away_team": "New York Knicks",
+    "venue": null,
+    "event_name": null,
+    "commence_time": "2026-11-21T00:30:00Z",
+    "previous_ids": [],
+    "regions": [
+     "global",
+     "us"
+    ],
+    "first_seen": "2026-11-18T09:14:02Z",
+    "seq": 1840305
+   }
+  }
+ ]
+}

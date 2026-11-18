@@ -1,0 +1,41 @@
+{
+ "meta": {
+  "feed_type": "events_state",
+  "region": "us",
+  "odds_format": "decimal",
+  "processed_at": "2026-11-18T18:00:00.000Z",
+  "count": 1,
+  "version": "v2",
+  "next_cursor": null,
+  "since": "3fa9c1d2.1840221",
+  "as_of": "2026-11-18T18:00:00Z",
+  "stale": false,
+  "lag_s": 0,
+  "verdicts_held": false,
+  "unknown_ids": []
+ },
+ "data": [
+  {
+   "id": "or_evt_e7d98bab53e3",
+   "state": "scheduled",
+   "reason": null,
+   "state_since": "2026-11-18T09:14:02Z",
+   "merged_into": null,
+   "sport_key": "basketball_nba",
+   "sport_title": "NBA",
+   "competition_key": "basketball_nba",
+   "home_team": "Boston Celtics",
+   "away_team": "New York Knicks",
+   "venue": null,
+   "event_name": null,
+   "commence_time": "2026-11-21T00:30:00Z",
+   "previous_ids": [],
+   "regions": [
+    "global",
+    "us"
+   ],
+   "first_seen": "2026-11-18T09:14:02Z",
+   "seq": 1840221
+  }
+ ]
+}
